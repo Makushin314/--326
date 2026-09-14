@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Расписание ЛК-326</title>
     <style>
         :root {
@@ -30,6 +30,9 @@
         * {
             box-sizing: border-box;
         }
+        html, body {
+            overscroll-behavior-y: none;
+        }
         body {
             margin: 0;
             background: var(--bg);
@@ -55,6 +58,11 @@
             gap: 12px;
             margin-bottom: 24px;
         }
+        .header-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
         .eyebrow {
             color: var(--accent);
             font-size: 12px;
@@ -74,7 +82,7 @@
             color: var(--muted);
             font-size: 13px;
         }
-        .theme-toggle {
+        .icon-btn, .theme-toggle {
             width: 44px;
             height: 44px;
             border-radius: 14px;
@@ -83,6 +91,10 @@
             display: grid;
             place-items: center;
             font-size: 18px;
+            transition: border-color .2s;
+        }
+        .icon-btn:hover, .theme-toggle:hover {
+            border-color: var(--accent);
         }
         .date-strip {
             display: grid;
@@ -274,7 +286,7 @@
             pointer-events: none;
         }
 
-        /* Modal */
+        /* Modal (общие стили) */
         .modal {
             position: fixed;
             inset: 0;
@@ -284,6 +296,7 @@
             justify-content: center;
             padding: 16px;
             z-index: 10;
+            overscroll-behavior: contain;
         }
         .modal.open {
             display: flex;
@@ -296,6 +309,7 @@
             border: 1px solid var(--border);
             border-radius: 22px;
             padding: 20px;
+            overscroll-behavior: contain;
         }
         .modal-head {
             display: flex;
@@ -389,6 +403,107 @@
             text-align: center;
         }
 
+        /* === Календарь === */
+        .cal-box {
+            width: min(100%, 380px);
+            padding: 18px;
+        }
+        .cal-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .cal-title {
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: -.02em;
+            flex: 1;
+            text-align: center;
+        }
+        .cal-nav {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            font-size: 18px;
+            display: grid;
+            place-items: center;
+            transition: border-color .2s;
+        }
+        .cal-nav:hover {
+            border-color: var(--accent);
+        }
+        .cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+        .cal-dow {
+            text-align: center;
+            font-size: 11px;
+            color: var(--muted);
+            font-weight: 800;
+            padding: 6px 0;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+        }
+        .cal-day {
+            aspect-ratio: 1 / 1;
+            border-radius: 10px;
+            background: var(--surface);
+            border: 1px solid transparent;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text);
+            display: grid;
+            place-items: center;
+            transition: all .15s;
+            padding: 0;
+        }
+        .cal-day.other {
+            color: var(--muted);
+            opacity: .4;
+            background: transparent;
+            pointer-events: none;
+        }
+        .cal-day[data-day]:hover {
+            border-color: var(--accent);
+        }
+        .cal-day.today {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .cal-day.selected {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+        .cal-legend {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 14px;
+            font-size: 11px;
+            color: var(--muted);
+        }
+        .cal-legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .cal-legend .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+            border: 1.5px solid var(--accent);
+        }
+        .cal-legend .dot.filled {
+            background: var(--accent);
+        }
+
         @media(max-width:420px) {
             .app {
                 padding: 16px 12px 32px;
@@ -437,6 +552,9 @@
                 padding: 14px;
                 border-radius: 18px;
             }
+            .cal-box {
+                padding: 14px;
+            }
             .break-row {
                 padding: 5px 10px 5px 66px;
                 font-size: 11px;
@@ -452,7 +570,10 @@
                 <h1>Расписание занятий</h1>
                 <p class="subtitle">Группа ЛК-326</p>
             </div>
-            <button class="theme-toggle" id="themeBtn" aria-label="Переключить тему">☀️</button>
+            <div class="header-actions">
+                <button class="icon-btn" id="calendarBtn" aria-label="Выбрать дату">📅</button>
+                <button class="theme-toggle" id="themeBtn" aria-label="Переключить тему">☀️</button>
+            </div>
         </header>
 
         <nav class="date-strip" aria-label="Выбор недели">
@@ -470,6 +591,7 @@
         <div class="watermark">Семененко Максим</div>
     </main>
 
+    <!-- Модалка "Всё расписание" -->
     <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal-box">
             <div class="modal-head">
@@ -480,7 +602,36 @@
         </div>
     </div>
 
+    <!-- Модалка "Календарь" -->
+    <div class="modal" id="calendarModal" role="dialog" aria-modal="true" aria-labelledby="calTitle">
+        <div class="modal-box cal-box">
+            <div id="calendarContent"></div>
+        </div>
+    </div>
+
+    <!-- Официальный скрипт Telegram WebApp -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
     <script>
+        // ==== Telegram WebApp fix ====
+        (function () {
+            try {
+                if (window.Telegram && window.Telegram.WebApp) {
+                    window.Telegram.WebApp.ready();
+                    if (typeof window.Telegram.WebApp.disableVerticalSwipes === "function") {
+                        window.Telegram.WebApp.disableVerticalSwipes();
+                    }
+                    // Включаем подтверждение закрытия (по желанию)
+                    if (typeof window.Telegram.WebApp.enableClosingConfirmation === "function") {
+                        window.Telegram.WebApp.enableClosingConfirmation();
+                    }
+                }
+            } catch (e) {
+                console.log("Telegram WebApp init error:", e);
+            }
+        })();
+
+        // ==== Данные ====
         const times = [
             ["09:15–09:55", 1],
             ["09:55–10:35", 1],
@@ -595,15 +746,20 @@
             return diff % 2 === 0 ? "odd" : "even";
         }
 
-        // Возвращает индекс дня недели (0=ПН ... 6=ВС), но не дальше субботы
-        // Если сегодня воскресенье – возвращает 5 (суббота)
         function getTodayIndex() {
-            const jsDay = new Date().getDay(); // 0=ВС, 1=ПН, ...
-            const idx = (jsDay + 6) % 7;       // 0=ПН ... 6=ВС
-            return idx === 6 ? 5 : idx;         // ВС -> СБ (т.к. в ВС пар нет)
+            const jsDay = new Date().getDay();
+            const idx = (jsDay + 6) % 7;
+            return idx === 6 ? 5 : idx;
+        }
+
+        function sameDay(a, b) {
+            return a.getFullYear() === b.getFullYear() &&
+                   a.getMonth() === b.getMonth() &&
+                   a.getDate() === b.getDate();
         }
 
         let currentMonday = getMonday(new Date());
+        let currentDate = new Date();
         let week = getWeekType(currentMonday);
 
         const datesEl = document.getElementById("dates");
@@ -611,6 +767,8 @@
         const weekLabel = document.getElementById("weekLabel");
         const modal = document.getElementById("modal");
         const modalContent = document.getElementById("modalContent");
+        const calendarModal = document.getElementById("calendarModal");
+        const calendarContent = document.getElementById("calendarContent");
 
         function formatDate(date) {
             return dateFormatter.format(date).replace(/\.$/, "");
@@ -699,6 +857,7 @@
         }
 
         function renderDay(date) {
+            currentDate = date;
             const day = days[(date.getDay() + 6) % 7];
             week = getWeekType(date);
             const weekLabelText = `${formatDate(currentMonday)} — ${formatDate(new Date(currentMonday.getTime() + 6 * 86400000))} · ${week === "odd" ? "Нечётная" : "Чётная"} неделя`;
@@ -765,11 +924,99 @@
 
         function render() {
             renderDates();
-            // Отображаем СЕГОДНЯШНИЙ день (или СБ, если сегодня ВС)
             const todayIdx = getTodayIndex();
             const date = new Date(currentMonday);
             date.setDate(currentMonday.getDate() + todayIdx);
             renderDay(date);
+        }
+
+        // ==== Календарь ====
+        let calendarViewMonth = new Date();
+
+        function openCalendar() {
+            calendarViewMonth = new Date(currentDate);
+            renderCalendar();
+            calendarModal.classList.add("open");
+        }
+
+        function renderCalendar() {
+            const year = calendarViewMonth.getFullYear();
+            const month = calendarViewMonth.getMonth();
+
+            const monthNames = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+                                "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+
+            const firstDay = new Date(year, month, 1, 12);
+            const startOffset = (firstDay.getDay() + 6) % 7;
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const prevMonthDays = new Date(year, month, 0).getDate();
+
+            const today = new Date();
+            today.setHours(12, 0, 0, 0);
+
+            let html = `
+                <div class="cal-head">
+                    <button class="cal-nav" id="calPrev" aria-label="Предыдущий месяц">‹</button>
+                    <div class="cal-title">${monthNames[month]} ${year}</div>
+                    <button class="cal-nav" id="calNext" aria-label="Следующий месяц">›</button>
+                </div>
+                <div class="cal-grid">
+                    ${["ПН","ВТ","СР","ЧТ","ПТ","СБ","ВС"].map(d => `<div class="cal-dow">${d}</div>`).join("")}
+            `;
+
+            // Дни предыдущего месяца
+            for (let i = startOffset - 1; i >= 0; i--) {
+                html += `<div class="cal-day other">${prevMonthDays - i}</div>`;
+            }
+
+            // Дни текущего месяца
+            for (let d = 1; d <= daysInMonth; d++) {
+                const date = new Date(year, month, d, 12);
+                const isToday = sameDay(date, today);
+                const isSelected = sameDay(date, currentDate);
+                const classes = ["cal-day"];
+                if (isToday) classes.push("today");
+                if (isSelected) classes.push("selected");
+                html += `<button class="${classes.join(" ")}" data-y="${year}" data-m="${month}" data-d="${d}">${d}</button>`;
+            }
+
+            // Дни следующего месяца
+            const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+            for (let i = 0; i < totalCells - startOffset - daysInMonth; i++) {
+                html += `<div class="cal-day other">${i + 1}</div>`;
+            }
+
+            html += `</div>
+                <div class="cal-legend">
+                    <span><span class="dot"></span>Сегодня</span>
+                    <span><span class="dot filled"></span>Выбрано</span>
+                </div>
+            `;
+
+            calendarContent.innerHTML = html;
+
+            document.getElementById("calPrev").addEventListener("click", () => {
+                calendarViewMonth = new Date(year, month - 1, 1, 12);
+                renderCalendar();
+            });
+            document.getElementById("calNext").addEventListener("click", () => {
+                calendarViewMonth = new Date(year, month + 1, 1, 12);
+                renderCalendar();
+            });
+
+            calendarContent.querySelectorAll(".cal-day[data-y]").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    const y = Number(btn.dataset.y);
+                    const m = Number(btn.dataset.m);
+                    const d = Number(btn.dataset.d);
+                    const picked = new Date(y, m, d, 12);
+                    currentMonday = getMonday(picked);
+                    week = getWeekType(currentMonday);
+                    renderDates();
+                    renderDay(picked);
+                    calendarModal.classList.remove("open");
+                });
+            });
         }
 
         function renderAllTable() {
@@ -816,7 +1063,7 @@
             modalContent.innerHTML = html;
         }
 
-        // ----- Свайп на мобильных -----
+        // ==== Свайп на мобильных ====
         let touchStartX = 0;
         let touchEndX = 0;
         const datesContainer = document.getElementById("dates");
@@ -837,17 +1084,23 @@
             }
         }, { passive: true });
 
-        // ----- Переключение недель -----
+        // ==== Переключение недель ====
         document.getElementById("prevBtn").addEventListener("click", () => {
             currentMonday.setDate(currentMonday.getDate() - 7);
             week = getWeekType(currentMonday);
-            render();
+            renderDates();
+            const date = new Date(currentMonday);
+            date.setDate(currentMonday.getDate() + getTodayIndex());
+            renderDay(date);
         });
 
         document.getElementById("nextBtn").addEventListener("click", () => {
             currentMonday.setDate(currentMonday.getDate() + 7);
             week = getWeekType(currentMonday);
-            render();
+            renderDates();
+            const date = new Date(currentMonday);
+            date.setDate(currentMonday.getDate() + getTodayIndex());
+            renderDay(date);
         });
 
         document.getElementById("allBtn").addEventListener("click", () => {
@@ -860,6 +1113,12 @@
             if (e.target === modal) modal.classList.remove("open");
         });
 
+        document.getElementById("calendarBtn").addEventListener("click", openCalendar);
+        calendarModal.addEventListener("click", e => {
+            if (e.target === calendarModal) calendarModal.classList.remove("open");
+        });
+
+        // ==== Тема ====
         const themeBtn = document.getElementById("themeBtn");
         const savedTheme = localStorage.getItem("theme");
         if (savedTheme) document.body.dataset.theme = savedTheme;
@@ -874,6 +1133,7 @@
             localStorage.setItem("theme", next);
             updateThemeIcon();
         });
+
         updateThemeIcon();
         render();
     </script>
